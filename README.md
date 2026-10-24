@@ -96,6 +96,8 @@ Run from the repository root.
 | `npm run preview`        | Serve the build as CloudFront would   |
 | `npm run infra:check`    | Terraform fmt, validate, test, scans  |
 | `npm run lint:workflows` | actionlint and zizmor on `.github/`   |
+| `npm run test:e2e`       | Browser smoke tests on the build      |
+| `npm run og`             | Re-render the link preview images     |
 
 ### Checking a production build
 
@@ -118,6 +120,14 @@ committed (`site/src/assets/fonts/`), so the build makes no network call and
 the hashes change only when the font files or their configuration do:
 `npm run headers` regenerates them, and CI's `npm run headers:check` fails if
 the committed file is stale.
+
+`npm run test:e2e` runs Playwright smoke tests against that same preview
+server (it starts one if none is running): both home pages, the timeline,
+a project opening from a deep link, the French fallback notice, contact
+validation, the link preview tags, the sitemap. Every request to another
+host is blocked, so the result never depends on a third party, and any
+console error or CSP violation fails the test. The first run needs a
+browser: `npx playwright install chromium`.
 
 `npm run infra:check` needs Terraform, tflint and trivy (all in
 `.tool-versions`). It reads no state and calls no AWS API. It builds the

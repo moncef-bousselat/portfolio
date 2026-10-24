@@ -34,12 +34,12 @@ flowchart LR
 
 ## Pull requests
 
-| Job                | Runs                                                                    | Credentials |
-| ------------------ | ----------------------------------------------------------------------- | ----------- |
-| `Site`             | `format:check`, `lint`, `check`, `test`, `build`, `headers:check`       | none        |
-| `Terraform checks` | `scripts/infra-check.sh`, the same as `npm run infra:check`             | none        |
-| `Workflow lint`    | actionlint (with shellcheck over every `run:` block) and zizmor         | none        |
-| `Terraform plan`   | `scripts/ci/terraform-plan.sh` on `infra/main`, without taking the lock | plan role   |
+| Job                | Runs                                                                          | Credentials |
+| ------------------ | ----------------------------------------------------------------------------- | ----------- |
+| `Site`             | `format:check`, `lint`, `check`, `test`, `build`, `headers:check`, `test:e2e` | none        |
+| `Terraform checks` | `scripts/infra-check.sh`, the same as `npm run infra:check`                   | none        |
+| `Workflow lint`    | actionlint (with shellcheck over every `run:` block) and zizmor               | none        |
+| `Terraform plan`   | `scripts/ci/terraform-plan.sh` on `infra/main`, without taking the lock       | plan role   |
 
 These four job names are the required status checks in the `main` ruleset.
 
