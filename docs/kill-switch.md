@@ -128,10 +128,10 @@ that fired.
 - **Not instant.** CloudFront's metrics arrive a few minutes late, and
   disabling a distribution takes a few minutes to reach every edge. Expect 5 to
   10 minutes from the start of a flood to the site going dark.
-- **Not necessarily zero.** A disabled distribution stops serving content,
-  which is the expensive part. AWS does not document whether requests to a
-  disabled distribution are still counted, so the cost after the switch may
-  not be exactly zero.
+- **Unreachable, not just empty.** A disabled distribution's DNS is
+  withdrawn, so the Route 53 alias stops resolving: browsers and bots cannot
+  even reach CloudFront, so no requests are served or billed. Observed in the
+  first live test (2026-10-24); AWS's pricing pages do not spell it out.
 - **CloudFront only.** Lambda, API Gateway, DynamoDB and SES are capped
   differently: the API throttle, the Lambda's concurrency and the per-visitor
   limit ([`contact.md`](contact.md)).
