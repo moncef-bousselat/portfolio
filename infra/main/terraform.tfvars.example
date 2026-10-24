@@ -45,6 +45,10 @@ contact_recipient_email = "you@example.com"
 # through DKIM records this stack writes). Required without a domain.
 # ses_from_email = "contact@example.com"
 
+# DMARC for the domain when the sender is on it: none (report only, the
+# default), quarantine or reject. null writes no record.
+# dmarc_policy = "none"
+
 # The Turnstile secret key lives in SSM, created by hand - Terraform reads
 # only its name, so the value never enters state:
 #   read -rs TS_SECRET && aws ssm put-parameter --region <aws_region> \

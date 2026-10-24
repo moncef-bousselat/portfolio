@@ -143,6 +143,7 @@ variables {
   enable_www_redirect = true
   budget_limit_usd    = 5
   budget_alert_email  = "alerts@example.com"
+  dmarc_policy        = "none"
 
   # Runs without a domain need an explicit sender; domain runs that test
   # the contact@<domain> default set it back to null.
@@ -434,6 +435,70 @@ run "contact_from_another_domain" {
     condition     = aws_sesv2_email_identity.contact.email_identity == "me@example.net" && length(aws_route53_record.ses_dkim) == 0
     error_message = "A sender off the site's domain is verified as an address, with no DKIM records in the site's zone."
   }
+
+  assert {
+    condition     = length(aws_route53_record.dmarc) == 0
+    error_message = "With the sender off the domain, the site's domain gets no DMARC record from this stack."
+  }
+}
+
+run "dmarc_on_the_domain" {
+  command = apply
+
+  variables {
+    domain_name    = "example.com"
+    ses_from_email = null
+  }
+
+  assert {
+    condition = (
+      one(aws_route53_record.dmarc).name == "_dmarc.example.com"
+      && one(aws_route53_record.dmarc).type == "TXT"
+      && one(aws_route53_record.dmarc).records == toset(["v=DMARC1; p=none; adkim=s; aspf=r"])
+    )
+    error_message = "The domain gets a report-only DMARC record, DKIM strict, no report address."
+  }
+}
+
+run "dmarc_policy_reaches_the_record" {
+  command = plan
+
+  variables {
+    domain_name    = "example.com"
+    ses_from_email = null
+    dmarc_policy   = "reject"
+  }
+
+  assert {
+    condition     = one(aws_route53_record.dmarc).records == toset(["v=DMARC1; p=reject; adkim=s; aspf=r"])
+    error_message = "dmarc_policy sets p=."
+  }
+}
+
+run "no_dmarc_record_when_managed_elsewhere" {
+  command = plan
+
+  variables {
+    domain_name    = "example.com"
+    ses_from_email = null
+    dmarc_policy   = null
+  }
+
+  assert {
+    condition     = length(aws_route53_record.dmarc) == 0
+    error_message = "dmarc_policy = null writes no record."
+  }
+}
+
+run "rejects_an_unknown_dmarc_policy" {
+  command = plan
+
+  variables {
+    domain_name  = "example.com"
+    dmarc_policy = "monitor"
+  }
+
+  expect_failures = [var.dmarc_policy]
 }
 
 run "contact_limits_are_variables" {

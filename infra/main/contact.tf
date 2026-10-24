@@ -129,6 +129,23 @@ resource "aws_route53_record" "ses_dkim" {
   records = ["${data.aws_sesv2_email_identity.contact[0].dkim_signing_attributes[0].tokens[count.index]}.dkim.amazonses.com"]
 }
 
+/*
+ * DMARC: what receivers should do with mail that claims this domain in its
+ * From but fails authentication. SES's mail passes through DKIM, signed as
+ * exactly this domain (adkim=s). SPF is left relaxed: SES's bounce address
+ * is on amazonses.com, so SPF never aligns and DMARC rests on DKIM alone.
+ * No rua: no aggregate reports are requested.
+ */
+resource "aws_route53_record" "dmarc" {
+  count = local.ses_domain_identity && var.dmarc_policy != null ? 1 : 0
+
+  zone_id = local.zone_id
+  name    = "_dmarc.${var.domain_name}"
+  type    = "TXT"
+  ttl     = 3600
+  records = ["v=DMARC1; p=${var.dmarc_policy}; adkim=s; aspf=r"]
+}
+
 # --- Lambda ------------------------------------------------------------------
 
 data "aws_iam_policy_document" "contact_assume" {

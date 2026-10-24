@@ -158,6 +158,21 @@ variable "ses_from_email" {
   }
 }
 
+variable "dmarc_policy" {
+  description = <<-DESC
+    DMARC policy for the domain, when the sender is on it: none (report
+    only), quarantine (spam folder) or reject. null writes no DMARC record,
+    for a domain whose DMARC is managed elsewhere.
+  DESC
+  type        = string
+  default     = "none"
+
+  validation {
+    condition     = var.dmarc_policy == null || contains(["none", "quarantine", "reject"], coalesce(var.dmarc_policy, "none"))
+    error_message = "dmarc_policy must be none, quarantine, reject or null."
+  }
+}
+
 variable "turnstile_secret_parameter_name" {
   description = <<-DESC
     Name of the SSM SecureString holding the Turnstile secret key, created by
