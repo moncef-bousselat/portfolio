@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig, envField, fontProviders } from 'astro/config';
 import mdx from '@astrojs/mdx';
+import sitemap from '@astrojs/sitemap';
 import { shikiStyleToClass } from './src/lib/shiki-classes.ts';
 
 /**
@@ -43,7 +44,19 @@ export default defineConfig({
   site: 'https://moncefbousselat.com',
   output: 'static',
 
-  integrations: [mdx()],
+  integrations: [
+    mdx(),
+    /*
+     * sitemap-index.xml + sitemap-0.xml, each page listed with its EN/FR
+     * alternates (the same pairs as the hreflang links in BaseLayout).
+     * robots.txt (src/pages/robots.txt.ts) points crawlers at it. The 404
+     * pages are noindex, so they stay out.
+     */
+    sitemap({
+      i18n: { defaultLocale: 'en', locales: { en: 'en', fr: 'fr' } },
+      filter: (page) => !/\/404\/?$/.test(new URL(page).pathname),
+    }),
+  ],
 
   /*
    * The Turnstile site key is public by design: it is rendered into the

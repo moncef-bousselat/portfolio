@@ -36,9 +36,9 @@ const links = (Object.keys(linkLabels) as (keyof typeof linkLabels)[])
  * No JS: a bare <dialog> is display:none, which would make #<slug> a dead
  *   link. The :target:not([open]) rule below reveals it as a static panel
  *   instead, so deep links work with scripting off.
- * With JS: the island calls showModal(), which sets [open] - that disables
- *   the :target rule and the modal styles take over, bringing a real focus
- *   trap and Esc handling from the platform.
+ * With JS: the island marks the panel [data-enhanced], which disables the
+ *   :target rule, and calls showModal(), which sets [open] for the modal
+ *   styles - a real focus trap and Esc handling from the platform.
  */}
 <dialog id={slug} class="panel" aria-labelledby={`${slug}-title`}>
   <article>
@@ -114,7 +114,7 @@ const links = (Object.keys(linkLabels) as (keyof typeof linkLabels)[])
   }
 
   /* --- no-JS fallback: a static panel revealed by the URL hash ----------- */
-  .panel:target:not([open]) {
+  .panel:target:not([open]):not([data-enhanced]) {
     display: block;
     position: static;
     margin-block: var(--space-5);

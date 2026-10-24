@@ -66,6 +66,12 @@ function init(): void {
   });
 
   for (const panel of panels) {
+    // Switches off the no-JS :target rule for this panel. Without it, a
+    // panel opened from a deep link reappears inline after closing: the
+    // hash is cleared with history.replaceState, which browsers do not
+    // treat as a change of :target.
+    panel.dataset.enhanced = '';
+
     // Clicking the backdrop closes. The backdrop is not a child, so a click
     // landing on the dialog itself rather than its content means the backdrop.
     panel.addEventListener('click', (event) => {

@@ -28,10 +28,13 @@
     "format:check": "prettier --check .",
     "test": "node --test \"infra/**/*.test.mjs\" \"scripts/**/*.test.mjs\" && npm run test --workspaces --if-present",
     "infra:check": "scripts/infra-check.sh",
-    "lint:workflows": "actionlint && zizmor ."
+    "lint:workflows": "actionlint && zizmor .",
+    "test:e2e": "playwright test",
+    "og": "node scripts/og-image.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.64.0",
     "concurrently": "^10.0.6",
     "eslint": "^10.13.0",
     "eslint-plugin-astro": "^3.2.1",
