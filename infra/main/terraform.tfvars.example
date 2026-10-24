@@ -58,3 +58,6 @@ contact_recipient_email = "you@example.com"
 # contact_throttle_burst_limit = 5
 # contact_reserved_concurrency = 2
 # log_retention_days           = 14
+
+# One message per visitor (IP, or IPv6 /64) per this many seconds; 0 is off.
+# contact_rate_limit_window_seconds = 300

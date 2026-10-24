@@ -121,6 +121,8 @@ const en = {
     'The spam check could not load, so the form cannot be sent. A content blocker may be stopping challenges.cloudflare.com.',
   'contact.error.tooMany':
     'Too many messages are being sent right now. Please try again in a minute.',
+  'contact.error.limited':
+    'You sent a message a few minutes ago. You can send another in {minutes} min.',
   'contact.error.generic':
     'Something went wrong and your message was not sent. Please try again later.',
 } as const;

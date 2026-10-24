@@ -10,8 +10,9 @@
     "test": "node --test \"src/**/*.test.mjs\" \"scripts/**/*.test.mjs\""
   },
   "dependencies": {
-    "@aws-sdk/client-sesv2": "^3.1147.0",
-    "@aws-sdk/client-ssm": "^3.1147.0"
+    "@aws-sdk/client-dynamodb": "3.1149.0",
+    "@aws-sdk/client-sesv2": "3.1149.0",
+    "@aws-sdk/client-ssm": "3.1149.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.164",

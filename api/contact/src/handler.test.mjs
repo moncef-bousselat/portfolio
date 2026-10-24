@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { handlerFromEnv } from './config.ts';
-import { createHandler, visitorIp } from './handler.ts';
+import { createHandler, fromCloudFront, visitorIp } from './handler.ts';
+import { memoryLimiter } from './ratelimit.ts';
 
 const form = {
   name: 'Ada Lovelace',
@@ -210,6 +211,125 @@ describe('handler: logging', () => {
   });
 });
 
+describe('handler: per-IP limit', () => {
+  const viewer = (ip) => event({ headers: { 'cloudfront-viewer-address': `${ip}:4431` } });
+
+  it('allows one message per visitor per window, answering 429 with Retry-After', async () => {
+    const { handler, calls } = setup({ limiter: memoryLimiter(300) });
+    assert.equal((await handler(viewer('203.0.113.9'))).statusCode, 200);
+
+    const second = await handler(viewer('203.0.113.9'));
+    assert.equal(second.statusCode, 429);
+    assert.deepEqual(json(second), { ok: false, error: 'rateLimited' });
+    assert.equal(second.headers['retry-after'], '300');
+    assert.equal(calls.send.length, 1);
+
+    assert.equal((await handler(viewer('198.51.100.7'))).statusCode, 200);
+  });
+
+  it('opens again once the window has passed', async () => {
+    let clock = new Date('2026-10-21T00:00:00Z');
+    const { handler } = setup({ limiter: memoryLimiter(300), now: () => clock });
+    await handler(viewer('203.0.113.9'));
+    clock = new Date('2026-10-21T00:04:59Z');
+    assert.equal((await handler(viewer('203.0.113.9'))).statusCode, 429);
+    clock = new Date('2026-10-21T00:05:00Z');
+    assert.equal((await handler(viewer('203.0.113.9'))).statusCode, 200);
+  });
+
+  it('spends no slot when Turnstile rejects, so nobody can lock out a shared IP', async () => {
+    const limiter = memoryLimiter(300);
+    const rejected = setup({
+      limiter,
+      verify: async () => ({ ok: false, reason: 'rejected', codes: [] }),
+    });
+    await rejected.handler(viewer('203.0.113.9'));
+    const { handler } = setup({ limiter });
+    assert.equal((await handler(viewer('203.0.113.9'))).statusCode, 200);
+  });
+
+  it('gives the slot back when sending fails', async () => {
+    const limiter = memoryLimiter(300);
+    const failing = setup({
+      limiter,
+      send: async () => {
+        throw new Error('ses down');
+      },
+    });
+    assert.equal((await failing.handler(viewer('203.0.113.9'))).statusCode, 502);
+    const { handler } = setup({ limiter });
+    assert.equal((await handler(viewer('203.0.113.9'))).statusCode, 200);
+  });
+
+  it('lets the message through when the limit store fails, and says so in the log', async () => {
+    const { handler, calls } = setup({
+      limiter: {
+        windowSeconds: 300,
+        claim: async () => {
+          throw new Error('throttled');
+        },
+        release: async () => undefined,
+      },
+    });
+    assert.equal((await handler(viewer('203.0.113.9'))).statusCode, 200);
+    assert.deepEqual(
+      calls.logs.map((entry) => entry.outcome),
+      ['limitUnavailable', 'sent'],
+    );
+  });
+
+  it('keys the limit on a hash, never the IP', async () => {
+    const claimed = [];
+    const { handler, calls } = setup({
+      limiter: {
+        windowSeconds: 300,
+        claim: async (key) => (claimed.push(key), true),
+        release: async () => undefined,
+      },
+    });
+    await handler(viewer('203.0.113.9'));
+    assert.equal(claimed.length, 1);
+    assert.equal(claimed[0].includes('203.0.113'), false);
+    assert.equal(JSON.stringify(calls.logs).includes('203.0.113.9'), false);
+  });
+});
+
+describe('handler: origin check', () => {
+  const originSecret = 'a-long-random-origin-secret';
+
+  it('refuses a request without the CloudFront secret before reading it', async () => {
+    for (const headers of [{}, { 'x-origin-verify': 'wrong' }, { 'x-origin-verify': '' }]) {
+      const { handler, calls } = setup({ originSecret });
+      const result = await handler(event({ headers }));
+      assert.equal(result.statusCode, 403);
+      assert.deepEqual(json(result), { ok: false, error: 'forbidden' });
+      assert.equal(calls.secretReads, 0);
+      assert.equal(calls.verify.length + calls.send.length, 0);
+      assert.equal(calls.logs[0].stage, 'origin');
+    }
+  });
+
+  it('lets a request with the secret through', async () => {
+    const { handler, calls } = setup({ originSecret });
+    const result = await handler(event({ headers: { 'x-origin-verify': originSecret } }));
+    assert.equal(result.statusCode, 200);
+    assert.equal(calls.send.length, 1);
+  });
+
+  it('never logs the secret', async () => {
+    const { handler, calls } = setup({ originSecret });
+    await handler(event({ headers: { 'x-origin-verify': 'wrong' } }));
+    assert.equal(JSON.stringify(calls.logs).includes('wrong'), false);
+  });
+
+  it('compares values of different lengths without throwing', () => {
+    const withSecret = (value) => ({ ...event(), headers: { 'x-origin-verify': value } });
+    assert.equal(fromCloudFront(withSecret('x'), originSecret), false);
+    assert.equal(fromCloudFront(withSecret(originSecret + 'x'), originSecret), false);
+    assert.equal(fromCloudFront(withSecret(originSecret), originSecret), true);
+  });
+});
+
 describe('visitorIp', () => {
   const withHeaders = (headers) => ({ ...event(), headers });
 
@@ -244,6 +364,37 @@ describe('handlerFromEnv', () => {
   for (const name of ['MAIL_FROM', 'MAIL_TO', 'MAIL_TRANSPORT']) {
     it(`fails at startup without ${name}`, () => {
       assert.throws(() => handlerFromEnv({ ...env, [name]: undefined }), new RegExp(name));
+    });
+  }
+
+  it('requires the origin secret inside Lambda, not locally', () => {
+    const lambda = {
+      ...env,
+      MAIL_TRANSPORT: 'ses',
+      AWS_LAMBDA_FUNCTION_NAME: 'portfolio-contact',
+      RATE_LIMIT_TABLE: 'portfolio-contact-limits',
+    };
+    assert.throws(() => handlerFromEnv(lambda), /ORIGIN_VERIFY_SECRET/);
+    assert.equal(typeof handlerFromEnv({ ...lambda, ORIGIN_VERIFY_SECRET: 'x' }), 'function');
+  });
+
+  it('requires the limit table inside Lambda, where a memory limit means nothing', () => {
+    const lambda = {
+      ...env,
+      MAIL_TRANSPORT: 'ses',
+      AWS_LAMBDA_FUNCTION_NAME: 'portfolio-contact',
+      ORIGIN_VERIFY_SECRET: 'x',
+    };
+    assert.throws(() => handlerFromEnv(lambda), /RATE_LIMIT_TABLE/);
+    assert.equal(typeof handlerFromEnv({ ...lambda, RATE_LIMIT_WINDOW_SECONDS: '0' }), 'function');
+  });
+
+  for (const value of ['-1', '1.5', 'five']) {
+    it(`refuses RATE_LIMIT_WINDOW_SECONDS=${JSON.stringify(value)}`, () => {
+      assert.throws(
+        () => handlerFromEnv({ ...env, RATE_LIMIT_WINDOW_SECONDS: value }),
+        /RATE_LIMIT_WINDOW_SECONDS/,
+      );
     });
   }
 

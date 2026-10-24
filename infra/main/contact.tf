@@ -4,8 +4,8 @@
  *   CloudFront /api/*  ->  API Gateway HTTP API  ->  Lambda  ->  SES
  *
  * Abuse and cost limits, all here: stage throttling, the Lambda's reserved
- * concurrency, a role that can send only from the one sender to the one
- * recipient, and short log retention. Turnstile, the honeypot and request
+ * concurrency, a per-visitor limit table, a role that can send only from
+ * the one sender to the one recipient, and short log retention. Turnstile, the honeypot and request
  * validation live in the handler (api/contact).
  *
  * The Turnstile secret is an SSM SecureString created by hand. Only its
@@ -13,8 +13,10 @@
  * state.
  *
  * The execute-api endpoint also answers directly, around CloudFront; it has
- * to, since CloudFront calls it. The throttling and Turnstile hold either
- * way, so there is nothing to gain from hiding it.
+ * to, since CloudFront calls it. So CloudFront adds a secret header on the
+ * way, and the handler refuses any request without it (403): every request
+ * that does real work came through CloudFront, which is what makes its
+ * CloudFront-Viewer-Address, the visitor's IP, trustworthy.
  */
 
 data "aws_caller_identity" "current" {}
@@ -39,6 +41,51 @@ locals {
   turnstile_parameter_arn  = "arn:${local.partition}:ssm:${var.aws_region}:${local.account_id}:parameter${local.turnstile_parameter_name}"
 
   contact_bundle = "${path.module}/../../api/contact/dist/contact.zip"
+}
+
+/*
+ * The x-origin-verify value. Unlike the Turnstile secret it does live in
+ * state (and in the distribution and Lambda configuration): CloudFront
+ * needs it in its config. It guards less: leaked, it lets a caller skip
+ * CloudFront and pose as other IPs, while Turnstile and the throttle still
+ * hold. Rotate with terraform apply -replace=random_password.origin_verify;
+ * direct-to-API refusals briefly include real visitors while CloudFront
+ * deploys the new value, a few minutes.
+ */
+resource "random_password" "origin_verify" {
+  length  = 64
+  special = false
+}
+
+# --- Per-visitor limit -------------------------------------------------------
+
+/*
+ * One item per visitor who sent a message in the last window, keyed by an
+ * HMAC of their IP (api/contact/src/ratelimit.ts), never the IP itself.
+ * Items expire through TTL; DynamoDB deletes them lazily, which the handler
+ * allows for. On demand: a few writes a day cost nothing measurable.
+ *
+ * No point-in-time recovery: the items are worthless five minutes after
+ * they are written, and restoring them would only re-block visitors. The
+ * AWS-owned key encrypts them; a customer key would cost more per month than
+ * the stack, to protect hashes that expire in minutes.
+ */
+#trivy:ignore:AVD-AWS-0024
+#trivy:ignore:AVD-AWS-0025
+resource "aws_dynamodb_table" "contact_limits" {
+  name         = "${local.contact_name}-limits"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "pk"
+
+  attribute {
+    name = "pk"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "expiresAt"
+    enabled        = true
+  }
 }
 
 # --- SES ---------------------------------------------------------------------
@@ -123,6 +170,13 @@ data "aws_iam_policy_document" "contact" {
       variable = "ses:Recipients"
       values   = [var.contact_recipient_email]
     }
+  }
+
+  # Claim a slot, and give it back when sending fails. Nothing else.
+  statement {
+    sid       = "UseTheLimitTable"
+    actions   = ["dynamodb:PutItem", "dynamodb:DeleteItem"]
+    resources = [aws_dynamodb_table.contact_limits.arn]
   }
 
   statement {
@@ -211,6 +265,9 @@ resource "aws_lambda_function" "contact" {
       MAIL_TO                    = var.contact_recipient_email
       TURNSTILE_SECRET_PARAMETER = local.turnstile_parameter_name
       TURNSTILE_HOSTNAME         = local.domain_enabled ? var.domain_name : ""
+      ORIGIN_VERIFY_SECRET       = random_password.origin_verify.result
+      RATE_LIMIT_TABLE           = aws_dynamodb_table.contact_limits.name
+      RATE_LIMIT_WINDOW_SECONDS  = tostring(var.contact_rate_limit_window_seconds)
     }
   }
 

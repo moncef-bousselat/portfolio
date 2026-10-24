@@ -14,7 +14,14 @@ type FieldError = 'required' | 'tooLong' | 'invalid';
 interface Messages {
   fields: Record<Field, Record<FieldError, string>>;
   status: Record<
-    'fix' | 'sending' | 'challengePending' | 'challenge' | 'challengeLoad' | 'tooMany' | 'generic',
+    | 'fix'
+    | 'sending'
+    | 'challengePending'
+    | 'challenge'
+    | 'challengeLoad'
+    | 'tooMany'
+    | 'limited'
+    | 'generic',
     string
   >;
 }
@@ -199,6 +206,11 @@ function init(form: HTMLFormElement): void {
       }
     } else if (response.status === 403) {
       say(messages.status.challenge, 'error');
+    } else if (response.status === 429 && body?.error === 'rateLimited') {
+      // The per-visitor limit. A bare 429 is API Gateway's overall throttle.
+      const seconds = Number(response.headers.get('retry-after'));
+      const minutes = Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds / 60) : 5;
+      say(messages.status.limited.replace('{minutes}', String(minutes)), 'error');
     } else if (response.status === 429) {
       say(messages.status.tooMany, 'error');
     } else {

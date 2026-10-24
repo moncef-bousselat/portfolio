@@ -23,6 +23,9 @@ const DEFAULTS = {
   MAIL_TO: 'owner@localhost.test',
   // Cloudflare's dummy secret that accepts every token.
   TURNSTILE_SECRET: '1x0000000000000000000000000000000AA',
+  // Every local request comes from 127.0.0.1, so production's 300 s would
+  // block each test message for five minutes. Long enough to see the 429.
+  RATE_LIMIT_WINDOW_SECONDS: '60',
 };
 for (const [name, value] of Object.entries(DEFAULTS)) {
   process.env[name] ||= value;

@@ -124,6 +124,14 @@ resource "aws_cloudfront_distribution" "site" {
     origin_id   = "contact-api"
     domain_name = trimprefix(aws_apigatewayv2_api.contact.api_endpoint, "https://")
 
+    # Proof the request came through CloudFront; contact.tf has why. Sent on
+    # every request to this origin, overwriting any viewer header of the
+    # same name.
+    custom_header {
+      name  = "x-origin-verify"
+      value = random_password.origin_verify.result
+    }
+
     custom_origin_config {
       http_port              = 80
       https_port             = 443

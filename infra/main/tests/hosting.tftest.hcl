@@ -90,6 +90,15 @@ mock_provider "aws" {
 
 }
 
+# random_password's result, fixed so assertions can name it.
+mock_provider "random" {
+  mock_resource "random_password" {
+    defaults = {
+      result = "mock-origin-verify-secret"
+    }
+  }
+}
+
 mock_provider "aws" {
   alias = "us_east_1"
 
@@ -139,6 +148,16 @@ variables {
   # the contact@<domain> default set it back to null.
   contact_recipient_email = "owner@example.org"
   ses_from_email          = "contact@example.net"
+
+  # At their defaults, which the runs below assert. Left unpinned, a local
+  # terraform.tfvars that tunes them would fail those runs.
+  turnstile_secret_parameter_name = null
+  contact_throttle_rate_limit     = 1
+  contact_throttle_burst_limit    = 5
+  contact_reserved_concurrency    = 2
+  log_retention_days              = 14
+
+  contact_rate_limit_window_seconds = 300
 }
 
 run "without_a_domain" {
@@ -312,6 +331,9 @@ run "contact_on_the_domain" {
       MAIL_TO                    = "owner@example.org"
       TURNSTILE_SECRET_PARAMETER = "/portfolio/turnstile-secret"
       TURNSTILE_HOSTNAME         = "example.com"
+      ORIGIN_VERIFY_SECRET       = "mock-origin-verify-secret"
+      RATE_LIMIT_TABLE           = "portfolio-contact-limits"
+      RATE_LIMIT_WINDOW_SECONDS  = "300"
     })
     error_message = "The Lambda must send via SES, from contact@<domain>, to the configured recipient."
   }
@@ -319,6 +341,16 @@ run "contact_on_the_domain" {
   assert {
     condition     = aws_lambda_function.contact.runtime == "nodejs24.x" && aws_lambda_function.contact.architectures == tolist(["arm64"])
     error_message = "The handler runs on Node 24, arm64 - the same major as local development."
+  }
+
+  assert {
+    condition = (
+      aws_dynamodb_table.contact_limits.billing_mode == "PAY_PER_REQUEST"
+      && aws_dynamodb_table.contact_limits.hash_key == "pk"
+      && one(aws_dynamodb_table.contact_limits.ttl).attribute_name == "expiresAt"
+      && one(aws_dynamodb_table.contact_limits.ttl).enabled
+    )
+    error_message = "The limit table is on demand, keyed by pk, and expires items through expiresAt."
   }
 
   assert {
@@ -360,6 +392,14 @@ run "contact_through_cloudfront" {
   assert {
     condition     = one([for origin in aws_cloudfront_distribution.site.origin : origin.domain_name if origin.origin_id == "contact-api"]) == "a1b2c3d4e5.execute-api.eu-west-1.amazonaws.com"
     error_message = "The API origin is the execute-api hostname, without its scheme."
+  }
+
+  assert {
+    condition = one([for origin in aws_cloudfront_distribution.site.origin : origin.custom_header if origin.origin_id == "contact-api"]) == toset([{
+      name  = "x-origin-verify"
+      value = "mock-origin-verify-secret"
+    }])
+    error_message = "CloudFront must send the Lambda's origin secret to the API, and only that header."
   }
 
   assert {
@@ -453,4 +493,27 @@ run "rejects_a_relative_parameter_name" {
   }
 
   expect_failures = [var.turnstile_secret_parameter_name]
+}
+
+run "rejects_a_rate_limit_window_too_short_to_mean_anything" {
+  command = plan
+
+  variables {
+    contact_rate_limit_window_seconds = 30
+  }
+
+  expect_failures = [var.contact_rate_limit_window_seconds]
+}
+
+run "turns_the_rate_limit_off_with_zero" {
+  command = plan
+
+  variables {
+    contact_rate_limit_window_seconds = 0
+  }
+
+  assert {
+    condition     = aws_lambda_function.contact.environment[0].variables["RATE_LIMIT_WINDOW_SECONDS"] == "0"
+    error_message = "0 reaches the Lambda, which then skips the limit."
+  }
 }

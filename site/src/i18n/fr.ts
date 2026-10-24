@@ -121,6 +121,8 @@ const fr: UIStrings = {
     "La vérification anti-spam n'a pas pu se charger, le formulaire ne peut donc pas être envoyé. Un bloqueur de contenu empêche peut-être challenges.cloudflare.com.",
   'contact.error.tooMany':
     'Trop de messages sont envoyés en ce moment. Veuillez réessayer dans une minute.',
+  'contact.error.limited':
+    'Vous avez envoyé un message il y a quelques minutes. Vous pourrez en envoyer un autre dans {minutes} min.',
   'contact.error.generic':
     "Une erreur s'est produite et votre message n'a pas été envoyé. Veuillez réessayer plus tard.",
 };

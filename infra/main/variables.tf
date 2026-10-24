@@ -195,6 +195,17 @@ variable "contact_throttle_burst_limit" {
   }
 }
 
+variable "contact_rate_limit_window_seconds" {
+  description = "One message per visitor (IP, or IPv6 /64) per this many seconds. 0 turns the limit off."
+  type        = number
+  default     = 300
+
+  validation {
+    condition     = var.contact_rate_limit_window_seconds == 0 || (var.contact_rate_limit_window_seconds >= 60 && var.contact_rate_limit_window_seconds <= 86400 && floor(var.contact_rate_limit_window_seconds) == var.contact_rate_limit_window_seconds)
+    error_message = "contact_rate_limit_window_seconds must be 0, or a whole number of seconds from 60 to 86400."
+  }
+}
+
 /*
  * Reserving concurrency is refused when it would leave the account fewer
  * than 10 unreserved executions - which is every account still on the
