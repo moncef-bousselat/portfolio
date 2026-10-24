@@ -65,3 +65,13 @@ contact_recipient_email = "you@example.com"
 
 # One message per visitor (IP, or IPv6 /64) per this many seconds; 0 is off.
 # contact_rate_limit_window_seconds = 300
+
+# --- Cost kill switch --------------------------------------------------------
+
+# Disables the CloudFront distribution and emails budget_alert_email when the
+# estimated CloudFront cost crosses either threshold. SNS sends a
+# confirmation link to that address on the first apply: click it, or the
+# notice never arrives. Reopen with the "Reopen site" workflow.
+# kill_switch_enabled   = true
+# kill_switch_fast_usd  = 0.5 # in any 5 minutes
+# kill_switch_daily_usd = 2   # in any 24 hours

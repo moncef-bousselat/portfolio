@@ -2,8 +2,14 @@
  * Builds the Lambda deployment package:
  *
  *   npm run build --workspace api/contact
- *     -> api/contact/dist/index.mjs     the bundle, for inspection
- *     -> api/contact/dist/contact.zip   what Terraform uploads
+ *     -> api/contact/dist/index.mjs        the contact handler
+ *     -> api/contact/dist/killswitch.mjs   the cost kill switch
+ *     -> api/contact/dist/contact.zip      both, what Terraform uploads
+ *
+ * Both functions ship in one zip, each with its own handler setting
+ * (index.handler, killswitch.handler). Every CI path that plans, uploads and
+ * hash-checks the zip then covers the kill switch too, at the cost of a
+ * change to either function updating both.
  *
  * One ESM file with the AWS SDK clients bundled in, rather than relying on
  * the copy the runtime ships: the version is then the one the lockfile and
@@ -15,7 +21,7 @@
  */
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { zip } from './zip.mjs';
@@ -25,7 +31,7 @@ const dist = join(root, 'dist');
 
 const result = await build({
   absWorkingDir: root,
-  entryPoints: ['src/index.ts'],
+  entryPoints: { index: 'src/index.ts', killswitch: 'src/killswitch-index.ts' },
   bundle: true,
   platform: 'node',
   target: 'node24',
@@ -35,15 +41,20 @@ const result = await build({
   minify: true,
   legalComments: 'none',
   write: false,
-  outfile: 'dist/index.mjs',
+  outdir: 'dist',
+  outExtension: { '.js': '.mjs' },
   logLevel: 'warning',
 });
 
-const [output] = result.outputFiles;
-const archive = zip({ 'index.mjs': Buffer.from(output.contents) });
+const files = Object.fromEntries(
+  result.outputFiles.map((file) => [basename(file.path), Buffer.from(file.contents)]),
+);
+const archive = zip(files);
 
 await mkdir(dist, { recursive: true });
-await writeFile(join(dist, 'index.mjs'), output.contents);
+for (const [name, contents] of Object.entries(files)) {
+  await writeFile(join(dist, name), contents);
+}
 await writeFile(join(dist, 'contact.zip'), archive);
 
 // The value Terraform's filebase64sha256() will compute, for comparing builds.

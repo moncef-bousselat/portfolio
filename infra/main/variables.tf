@@ -248,3 +248,50 @@ variable "log_retention_days" {
     error_message = "log_retention_days must be a value CloudWatch Logs accepts, up to 365."
   }
 }
+
+# --- Cost kill switch (killswitch.tf) ---------------------------------------
+
+variable "kill_switch_enabled" {
+  description = "Disable the CloudFront distribution and email budget_alert_email when the estimated CloudFront cost crosses a threshold."
+  type        = bool
+  default     = true
+}
+
+variable "kill_switch_fast_usd" {
+  description = "Estimated CloudFront cost in any 5 minutes that trips the kill switch: a flood."
+  type        = number
+  default     = 0.5
+
+  validation {
+    condition     = var.kill_switch_fast_usd > 0
+    error_message = "kill_switch_fast_usd must be above 0."
+  }
+}
+
+variable "kill_switch_daily_usd" {
+  description = "Estimated CloudFront cost in any 24 hours that trips the kill switch: a slow burn."
+  type        = number
+  default     = 2
+
+  validation {
+    condition     = var.kill_switch_daily_usd > 0
+    error_message = "kill_switch_daily_usd must be above 0."
+  }
+}
+
+/*
+ * The estimate's prices: pay-as-you-go, at the dearest region of
+ * PriceClass_100 (Europe for requests, 2026-10), with no free allowance.
+ * Update them if AWS's prices or the price class change.
+ */
+variable "cloudfront_request_price_per_10k_usd" {
+  description = "Price of 10,000 HTTPS requests, for the kill switch estimate."
+  type        = number
+  default     = 0.012
+}
+
+variable "cloudfront_transfer_price_per_gb_usd" {
+  description = "Price of 1 GB of data transfer out, for the kill switch estimate."
+  type        = number
+  default     = 0.085
+}
