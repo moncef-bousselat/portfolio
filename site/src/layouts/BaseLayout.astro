@@ -1,5 +1,6 @@
 ---
 import { Font } from 'astro:assets';
+import Analytics from '../components/Analytics.astro';
 import { getAbsoluteLocaleUrl } from 'astro:i18n';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
@@ -81,6 +82,7 @@ const ogLocale = { en: 'en_US', fr: 'fr_FR' } as const;
          block in astro.config.mjs for why. -->
     <Font cssVariable="--font-sans" />
     <Font cssVariable="--font-mono" />
+    <Analytics />
     {!noindex && (
       <>
         <meta property="og:type" content="website" />

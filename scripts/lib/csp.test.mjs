@@ -86,13 +86,41 @@ describe('buildCsp', () => {
     assert.equal(buildCsp({ blocks: ['b', 'a'] }), buildCsp({ blocks: ['a', 'b'] }));
   });
 
-  it('allows the analytics origin for its script and its beacon only', () => {
+  it('allows the analytics script and its endpoint, each where it belongs', () => {
+    // Umami Cloud's shape: the script and the data endpoint on two hosts.
+    const policy = buildCsp({
+      analytics: {
+        provider: 'umami',
+        src: 'https://cloud.umami.is/script.js',
+        hostUrl: 'https://gateway.umami.is',
+        websiteId: 'x',
+      },
+    });
+    assert.deepEqual(directive(policy, 'script-src'), ["'self'", 'https://cloud.umami.is']);
+    assert.deepEqual(directive(policy, 'connect-src'), ["'self'", 'https://gateway.umami.is']);
+    assert.deepEqual(directive(policy, 'img-src'), ["'self'"]);
+  });
+
+  it('falls back to the script origin for the endpoint, as the tracker does', () => {
     const policy = buildCsp({
       analytics: { provider: 'umami', src: 'https://stats.example.com/script.js', websiteId: 'x' },
     });
-    assert.deepEqual(directive(policy, 'script-src'), ["'self'", 'https://stats.example.com']);
     assert.deepEqual(directive(policy, 'connect-src'), ["'self'", 'https://stats.example.com']);
-    assert.deepEqual(directive(policy, 'img-src'), ["'self'"]);
+  });
+
+  it('refuses a plain-http analytics endpoint', () => {
+    assert.throws(
+      () =>
+        buildCsp({
+          analytics: {
+            provider: 'umami',
+            src: 'https://x.example/s.js',
+            hostUrl: 'http://x.example',
+            websiteId: 'x',
+          },
+        }),
+      /endpoint must be served over https/,
+    );
   });
 
   it('refuses a plain-http analytics script', () => {

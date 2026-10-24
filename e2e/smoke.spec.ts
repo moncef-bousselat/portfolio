@@ -140,6 +140,32 @@ for (const { path, locale, role } of [
   });
 }
 
+test('the CSP allows every third-party script the page loads, and where it reports', async ({
+  page,
+}) => {
+  // With analytics off this checks nothing on the home page; with Umami on,
+  // it is the guard against a tracker the CSP would silently block.
+  const response = await page.goto('/');
+  const policy = response?.headers()['content-security-policy'] ?? '';
+  const sources = (name: string) =>
+    policy
+      .split(';')
+      .map((part) => part.trim().split(/\s+/))
+      .find(([directive]) => directive === name)
+      ?.slice(1) ?? [];
+
+  const scripts = await page.locator('script[src^="https://"]').evaluateAll((tags) =>
+    tags.map((tag) => ({
+      src: tag.getAttribute('src'),
+      host: tag.getAttribute('data-host-url'),
+    })),
+  );
+  for (const { src, host } of scripts) {
+    expect(sources('script-src')).toContain(new URL(src ?? '').origin);
+    if (host) expect(sources('connect-src')).toContain(new URL(host).origin);
+  }
+});
+
 test('robots.txt names the sitemap, and the sitemap lists both languages', async ({ request }) => {
   const robots = await request.get('/robots.txt');
   expect(robots.status()).toBe(200);

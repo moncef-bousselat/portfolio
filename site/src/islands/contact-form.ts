@@ -8,6 +8,8 @@
  * On success the form is replaced by a message that takes focus.
  */
 
+import { track } from '../lib/analytics';
+
 type Field = 'name' | 'email' | 'message';
 type FieldError = 'required' | 'tooLong' | 'invalid';
 
@@ -183,6 +185,7 @@ function init(form: HTMLFormElement): void {
     } | null;
 
     if (response.ok && body?.ok) {
+      track('contact_success');
       form.hidden = true;
       success.hidden = false;
       success.focus();

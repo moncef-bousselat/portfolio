@@ -75,11 +75,11 @@ export function collectInlineStyles(html) {
   return { blocks, attributes };
 }
 
-/** Origin of a URL, for allowing a third-party script and its beacon. */
-function originOf(src) {
-  const { protocol, origin } = new URL(src);
+/** Origin of a URL, for allowing a third-party script or its endpoint. */
+function originOf(url, what) {
+  const { protocol, origin } = new URL(url);
   if (protocol !== 'https:') {
-    throw new Error(`Analytics script must be served over https: ${src}`);
+    throw new Error(`Analytics ${what} must be served over https: ${url}`);
   }
   return origin;
 }
@@ -94,16 +94,21 @@ function originOf(src) {
 export function buildCsp({ blocks = [], analytics = { provider: 'none' }, turnstile = false }) {
   const blockHashes = [...new Set(blocks.map(hashSource))].sort();
 
-  const thirdParty = analytics.provider === 'none' ? [] : [originOf(analytics.src)];
+  // The script and the endpoint it reports to may differ (Umami Cloud's do).
+  const enabled = analytics.provider !== 'none';
+  const analyticsScript = enabled ? [originOf(analytics.src, 'script')] : [];
+  const analyticsEndpoint = enabled
+    ? [originOf(analytics.hostUrl ?? analytics.src, 'endpoint')]
+    : [];
   const challenge = turnstile ? [TURNSTILE_ORIGIN] : [];
 
   const directives = [
     ['default-src', ["'none'"]],
-    ['script-src', ["'self'", ...challenge, ...thirdParty]],
+    ['script-src', ["'self'", ...challenge, ...analyticsScript]],
     ['style-src', ["'self'", ...blockHashes]],
     ['img-src', ["'self'"]],
     ['font-src', ["'self'"]],
-    ['connect-src', ["'self'", ...thirdParty]],
+    ['connect-src', ["'self'", ...analyticsEndpoint]],
     ['frame-src', challenge.length > 0 ? challenge : null],
     ['manifest-src', ["'self'"]],
     ['base-uri', ["'none'"]],
