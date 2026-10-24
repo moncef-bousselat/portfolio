@@ -20,12 +20,17 @@ export const site = {
 /**
  * Analytics provider. 'none' ships no script and no cookies; CloudFront's
  * console reports cover traffic. Switching to Umami is this one entry:
- * scripts/gen-headers.mjs reads it, so the script's origin is added to the
- * CSP's script-src and connect-src automatically. Regenerate the headers
- * (npm run headers) after changing it.
+ * scripts/gen-headers.mjs reads it, so the script's origin goes into the
+ * CSP's script-src and the data endpoint's into connect-src automatically.
+ * Regenerate the headers (npm run headers) after changing it.
+ *
+ * hostUrl is where the tracker sends its data. Umami Cloud serves the script
+ * from cloud.umami.is but receives on gateway.umami.is, so the two origins
+ * differ; it is written into the script tag as data-host-url too, so the
+ * tracker and the CSP can never disagree.
  */
 export type AnalyticsConfig =
-  { provider: 'none' } | { provider: 'umami'; src: string; websiteId: string };
+  { provider: 'none' } | { provider: 'umami'; src: string; hostUrl: string; websiteId: string };
 
 export const analytics: AnalyticsConfig = { provider: 'none' };
 
