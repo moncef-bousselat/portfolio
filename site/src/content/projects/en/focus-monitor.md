@@ -11,7 +11,7 @@ tech:
 date: 2022-04-11
 status: archived
 links:
-  repo: https://github.com/Somnef/focus-monitor-ai
+  repo: https://github.com/moncef-bousselat/focus-monitor-ai
 ---
 
 Built with a team at the Google DevFest hackathon. It follows a computer user's

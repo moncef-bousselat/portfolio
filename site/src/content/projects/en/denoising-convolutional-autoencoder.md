@@ -11,7 +11,7 @@ tech:
 date: 2022-12-25
 status: archived
 links:
-  repo: https://github.com/Somnef/denoising_convolutional_autoencoder
+  repo: https://github.com/moncef-bousselat/denoising_convolutional_autoencoder
 ---
 
 Designed as part of my Ericsson internship on deep learning in IoT networking.

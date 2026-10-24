@@ -14,7 +14,7 @@ date: 2025-03-16
 status: completed
 featured: true
 links:
-  repo: https://github.com/Somnef/kubernetes-fault-tolerance
+  repo: https://github.com/moncef-bousselat/kubernetes-fault-tolerance
 ---
 
 Une application Python sur des conteneurs Docker, orchestrée par Kubernetes avec

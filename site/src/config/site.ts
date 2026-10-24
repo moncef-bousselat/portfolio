@@ -6,7 +6,7 @@
  * Terraform variable, read only by the contact Lambda.
  */
 export const site = {
-  github: 'https://github.com/Somnef',
+  github: 'https://github.com/moncef-bousselat',
   linkedin: 'https://www.linkedin.com/in/moncefbousselat/',
 
   /**

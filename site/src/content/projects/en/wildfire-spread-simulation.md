@@ -13,7 +13,7 @@ tech:
 date: 2022-04-11
 status: completed
 links:
-  repo: https://github.com/Somnef/semi-empirical-wildfire-simulation
+  repo: https://github.com/moncef-bousselat/semi-empirical-wildfire-simulation
   article: https://www.researchgate.net/publication/354678516_Applying_semi-empirical_simulation_of_wildfire_on_real_world_satellite_imagery_data
 ---
 
