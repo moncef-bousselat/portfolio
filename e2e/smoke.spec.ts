@@ -53,7 +53,10 @@ test('a project opens as a modal from a deep link, and Escape closes it', async 
 
   await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
-  expect(new URL(page.url()).hash).toBe('');
+  // The island clears the hash in the dialog's close event, which the
+  // browser fires as a separate task after the dialog hides: wait for it
+  // rather than reading the URL once. Reading it once failed on a CI run.
+  await expect(page).toHaveURL((url) => url.hash === '');
   expect(problems).toEqual([]);
 });
 
