@@ -180,8 +180,8 @@ variables {
   contact_rate_limit_window_seconds = 300
 
   kill_switch_enabled                  = true
-  kill_switch_fast_usd                 = 0.5
-  kill_switch_daily_usd                = 2
+  kill_switch_fast_usd                 = 0.25
+  kill_switch_daily_usd                = 1
   cloudfront_request_price_per_10k_usd = 0.012
   cloudfront_transfer_price_per_gb_usd = 0.085
 }
@@ -622,10 +622,10 @@ run "kill_switch_alarms_estimate_cost_in_two_windows" {
         one([for q in alarm.metric_query : q.metric[0].period if q.id == "requests"]),
       ]
       } == {
-      "5min" = ["portfolio-kill-switch-5min", 0.5, "GreaterThanOrEqualToThreshold", "notBreaching", 300]
-      "24h"  = ["portfolio-kill-switch-24h", 2, "GreaterThanOrEqualToThreshold", "notBreaching", 86400]
+      "5min" = ["portfolio-kill-switch-5min", 0.25, "GreaterThanOrEqualToThreshold", "notBreaching", 300]
+      "24h"  = ["portfolio-kill-switch-24h", 1, "GreaterThanOrEqualToThreshold", "notBreaching", 86400]
     }
-    error_message = "Two alarms, $0.50 in 5 minutes and $2 in 24 hours, quiet when there is no traffic."
+    error_message = "Two alarms, $0.25 in 5 minutes and $1 in 24 hours, quiet when there is no traffic."
   }
 
   assert {

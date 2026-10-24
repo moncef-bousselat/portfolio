@@ -260,7 +260,7 @@ variable "kill_switch_enabled" {
 variable "kill_switch_fast_usd" {
   description = "Estimated CloudFront cost in any 5 minutes that trips the kill switch: a flood."
   type        = number
-  default     = 0.5
+  default     = 0.25
 
   validation {
     condition     = var.kill_switch_fast_usd > 0
@@ -271,7 +271,7 @@ variable "kill_switch_fast_usd" {
 variable "kill_switch_daily_usd" {
   description = "Estimated CloudFront cost in any 24 hours that trips the kill switch: a slow burn."
   type        = number
-  default     = 2
+  default     = 1
 
   validation {
     condition     = var.kill_switch_daily_usd > 0

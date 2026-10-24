@@ -38,10 +38,10 @@ function sns() {
 
 const alarm = (overrides = {}) => ({
   AlarmName: 'portfolio-kill-switch-5min',
-  AlarmDescription: 'Estimated CloudFront cost of at least $0.50 in 5 minutes.',
+  AlarmDescription: 'Estimated CloudFront cost of at least $0.25 in 5 minutes.',
   NewStateValue: 'ALARM',
   NewStateReason:
-    'Threshold Crossed: 1 datapoint [0.73] was greater than or equal to the threshold (0.5).',
+    'Threshold Crossed: 1 datapoint [0.37] was greater than or equal to the threshold (0.25).',
   StateChangeTime: '2026-10-24T21:00:00.000+0000',
   Trigger: { Period: 300 },
   ...overrides,

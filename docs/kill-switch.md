@@ -15,7 +15,7 @@ brings the site back.
 ```mermaid
 flowchart LR
   cf["CloudFront<br/>per-minute metrics"]
-  alarms["Two cost alarms<br/>$0.50 / 5 min<br/>$2 / 24 h"]
+  alarms["Two cost alarms<br/>$0.25 / 5 min<br/>$1 / 24 h"]
   topic["SNS"]
   fn["Lambda<br/>disable distribution"]
   notify["SNS"]
@@ -42,8 +42,8 @@ late. For scale, $1 is about 830,000 requests, or about 12 GB served.
 
 | Alarm                        | Trips at (default)     | Catches                     |
 | ---------------------------- | ---------------------- | --------------------------- |
-| `portfolio-kill-switch-5min` | $0.50 in any 5 minutes | a flood (~420,000 requests) |
-| `portfolio-kill-switch-24h`  | $2 in any 24 hours     | a slow burn                 |
+| `portfolio-kill-switch-5min` | $0.25 in any 5 minutes | a flood (~210,000 requests) |
+| `portfolio-kill-switch-24h`  | $1 in any 24 hours     | a slow burn                 |
 
 The thresholds and both prices are variables (`kill_switch_fast_usd`,
 `kill_switch_daily_usd`, `cloudfront_request_price_per_10k_usd`,
