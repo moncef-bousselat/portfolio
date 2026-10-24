@@ -1,0 +1,31 @@
+---
+import { analytics } from '../config/site';
+
+/*
+ * The analytics loader: one external script tag, rendered only when a
+ * provider is configured in site.ts, so with 'none' the page ships nothing.
+ * The CSP allows exactly the origins configured here (scripts/lib/csp.mjs).
+ *
+ * Umami, cookieless:
+ * - data-host-url: where it reports, the same origin connect-src allows.
+ * - data-domains: counts only on the production hostname, never a local
+ *   build or the preview server.
+ * - data-do-not-track: visitors who send Do Not Track are not counted.
+ * - data-exclude-search: query strings never leave the browser. The hash is
+ *   kept, since it names the project a visitor opened.
+ */
+const domain = Astro.site?.hostname;
+---
+
+{analytics.provider === 'umami' && (
+  <script
+    is:inline
+    defer
+    src={analytics.src}
+    data-website-id={analytics.websiteId}
+    data-host-url={analytics.hostUrl}
+    data-domains={domain}
+    data-do-not-track="true"
+    data-exclude-search="true"
+  />
+)}

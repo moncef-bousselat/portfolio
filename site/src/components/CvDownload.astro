@@ -16,15 +16,14 @@ const t = useTranslations(lang);
  * opening in a tab - which is what "download" should do. No target="_blank":
  * that is for off-site links.
  *
- * data-track marks this as an event worth counting if analytics is ever
- * enabled (see src/lib/analytics.ts). Nothing reads it today, so it costs
- * no JavaScript.
+ * data-umami-event: the analytics script counts a click on it as a
+ * cv_download event, with no JavaScript of ours. Inert when analytics is off.
  */}
 <a
   class:list={['cv', variant]}
   href={cvHref(lang)}
   download
-  data-track="cv_download"
+  data-umami-event="cv_download"
   type="application/pdf"
 >
   {t('cv.download')}
