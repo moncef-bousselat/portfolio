@@ -106,6 +106,8 @@ resource "aws_cloudfront_cache_policy" "html" {
 #trivy:ignore:AVD-AWS-0010
 #trivy:ignore:AVD-AWS-0011
 resource "aws_cloudfront_distribution" "site" {
+  # At creation only: afterwards the kill switch (killswitch.tf) and the
+  # Reopen site workflow own it, and an apply must not undo either.
   enabled             = true
   comment             = "${var.project} static site"
   default_root_object = "index.html"
@@ -213,5 +215,9 @@ resource "aws_cloudfront_distribution" "site" {
     acm_certificate_arn            = local.domain_enabled ? aws_acm_certificate_validation.site[0].certificate_arn : null
     ssl_support_method             = local.domain_enabled ? "sni-only" : null
     minimum_protocol_version       = local.domain_enabled ? "TLSv1.2_2025" : "TLSv1"
+  }
+
+  lifecycle {
+    ignore_changes = [enabled]
   }
 }
