@@ -142,6 +142,7 @@ data "aws_iam_policy_document" "apply" {
       "route53domains:List*",
       "s3:*",
       "ses:*",
+      "sns:*",
       "tag:Get*",
     ]
 
