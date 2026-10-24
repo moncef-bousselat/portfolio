@@ -32,7 +32,14 @@ export const site = {
 export type AnalyticsConfig =
   { provider: 'none' } | { provider: 'umami'; src: string; hostUrl: string; websiteId: string };
 
-export const analytics: AnalyticsConfig = { provider: 'none' };
+export const analytics: AnalyticsConfig = {
+  provider: 'umami',
+  src: 'https://cloud.umami.is/script.js',
+  hostUrl: 'https://gateway.umami.is',
+  // Public by design: it is written into every page. It identifies the site
+  // in the owner's Umami account; it grants nothing.
+  websiteId: '497669b1-7915-4bc8-b796-f4495d0c674f',
+};
 
 /** Path to the CV for a locale, falling back to the default language. */
 export function cvHref(lang: string): string {
