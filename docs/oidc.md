@@ -100,6 +100,13 @@ resource in state, and a hand-written list breaks the first time a new
 resource type appears, as a confusing `AccessDenied` in CI. It cannot mutate
 anything, which is the property that matters for a role reachable from a PR.
 
+The apply role is the opposite: it can change only the services listed in
+`infra/bootstrap/roles.tf`. **A resource of a new service in `infra/main`
+needs that list extended and bootstrap applied locally first.** The PR's plan
+passes regardless (the plan role reads everything), so the gap only shows at
+apply, as an `AccessDenied` halfway through. That happened with the contact
+form's DynamoDB table.
+
 Plans travel through the state bucket under `plans/`, not as GitHub artifacts
 — on a public repository those are world-downloadable, and a plan can contain
 sensitive values.
