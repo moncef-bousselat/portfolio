@@ -81,8 +81,9 @@ resource "aws_cloudwatch_metric_alarm" "kill_switch" {
   for_each = local.kill_switch_windows
   provider = aws.us_east_1
 
-  alarm_name        = "${local.kill_switch_name}-${each.key}"
-  alarm_description = "Estimated CloudFront cost of at least $${each.value.usd} in ${each.value.label}. Disables the distribution."
+  alarm_name = "${local.kill_switch_name}-${each.key}"
+  # format(), not "$${...}": in HCL, $${ is the escape for a literal ${.
+  alarm_description = format("Estimated CloudFront cost of at least $%s in %s. Disables the distribution.", each.value.usd, each.value.label)
 
   comparison_operator = "GreaterThanOrEqualToThreshold"
   threshold           = each.value.usd
