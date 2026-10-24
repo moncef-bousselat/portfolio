@@ -160,6 +160,19 @@ scripts/         Local preview server and build tooling
 docs/            Infrastructure and pipeline notes
 ```
 
+## Analytics
+
+Off by default: `analytics` in `site/src/config/site.ts` is `{ provider: 'none' }`,
+and no script ships. CloudFront's console reports cover traffic meanwhile.
+
+To use [Umami](https://umami.is) (cookieless), set the provider, script,
+endpoint and website ID there, then `npm run build && npm run headers`. The
+CSP gains the script's origin in `script-src` and the endpoint's in
+`connect-src`; Umami Cloud's are different hosts, `cloud.umami.is` and
+`gateway.umami.is`. Only the production hostname is counted, so local
+builds never reach the dashboard. Two events are counted beyond pageviews:
+`cv_download` and `contact_success`.
+
 ## Accessibility and performance
 
 Accessibility is a build-time concern rather than an afterthought:
