@@ -628,6 +628,15 @@ run "kill_switch_alarms_estimate_cost_in_two_windows" {
     error_message = "Two alarms, $0.25 in 5 minutes and $1 in 24 hours, quiet when there is no traffic."
   }
 
+  # The owner reads this in the kill switch email.
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.kill_switch["5min"].alarm_description == "Estimated CloudFront cost of at least $0.25 in 5 minutes. Disables the distribution."
+      && aws_cloudwatch_metric_alarm.kill_switch["24h"].alarm_description == "Estimated CloudFront cost of at least $1 in 24 hours. Disables the distribution."
+    )
+    error_message = "The alarm descriptions state the threshold and the window."
+  }
+
   assert {
     condition = alltrue([
       for alarm in aws_cloudwatch_metric_alarm.kill_switch :
