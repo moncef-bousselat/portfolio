@@ -148,6 +148,20 @@ data "aws_iam_policy_document" "apply" {
     resources = ["*"]
   }
 
+  /*
+   * DynamoDB, narrowed to tables named for this project (today the contact
+   * form's per-visitor limit table). dynamodb:* rather than a list for the
+   * same reason the plan role reads everything: the provider's refresh of a
+   * table calls several Describe* actions that grow with its versions, and a
+   * missing one surfaces as an AccessDenied halfway through an apply.
+   */
+  statement {
+    sid       = "ManageProjectTables"
+    effect    = "Allow"
+    actions   = ["dynamodb:*"]
+    resources = ["arn:${data.aws_partition.current.partition}:dynamodb:*:${data.aws_caller_identity.current.account_id}:table/${var.project}-*"]
+  }
+
   # The Turnstile secret is created by hand and only read from here.
   statement {
     sid    = "ReadParameters"
