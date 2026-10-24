@@ -144,6 +144,11 @@ scoped roles. [`docs/ci.md`](docs/ci.md) has the pipeline, rollback and setup;
 [`docs/contact.md`](docs/contact.md) the contact form's setup and how to
 rotate its Turnstile secret.
 
+A cost kill switch takes the site offline if CloudFront's estimated bill
+crosses a threshold, and emails the owner; reopening is a manual, approved
+workflow. [`docs/kill-switch.md`](docs/kill-switch.md) has how it estimates
+cost, how to test it, and how to reopen.
+
 ## Layout
 
 ```
