@@ -29,7 +29,8 @@
     "test": "node --test \"infra/**/*.test.mjs\" \"scripts/**/*.test.mjs\" && npm run test --workspaces --if-present",
     "infra:check": "scripts/infra-check.sh",
     "lint:workflows": "actionlint && zizmor .",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "og": "node scripts/og-image.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

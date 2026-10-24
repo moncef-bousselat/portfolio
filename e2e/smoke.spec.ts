@@ -110,6 +110,33 @@ test('the contact form validates before sending anything', async ({ page, proble
   expect(problems).toEqual([]);
 });
 
+for (const { path, locale, role } of [
+  { path: '/projects/', locale: 'en_US', role: 'Cloud & DevOps Engineer' },
+  { path: '/fr/projects/', locale: 'fr_FR', role: 'Ingénieur Cloud & DevOps' },
+]) {
+  test(`${path} carries a link preview card`, async ({ page, request, problems }) => {
+    await page.goto(path);
+    const meta = (property: string) =>
+      page
+        .locator(`meta[property="${property}"], meta[name="${property}"]`)
+        .getAttribute('content');
+
+    expect(await meta('og:title')).toBe(await page.title());
+    expect(await meta('og:url')).toBe(`https://moncefbousselat.com${path}`);
+    expect(await meta('og:locale')).toBe(locale);
+    expect(await meta('og:image:alt')).toBe(`Moncef Bousselat, ${role}`);
+    expect(await meta('twitter:card')).toBe('summary_large_image');
+
+    // Absolute on the live domain; served here under the same path.
+    const image = new URL((await meta('og:image')) ?? '');
+    expect(image.origin).toBe('https://moncefbousselat.com');
+    const served = await request.get(image.pathname);
+    expect(served.status()).toBe(200);
+    expect(served.headers()['content-type']).toBe('image/png');
+    expect(problems).toEqual([]);
+  });
+}
+
 test('robots.txt names the sitemap, and the sitemap lists both languages', async ({ request }) => {
   const robots = await request.get('/robots.txt');
   expect(robots.status()).toBe(200);

@@ -3,6 +3,8 @@ import { Font } from 'astro:assets';
 import { getAbsoluteLocaleUrl } from 'astro:i18n';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
+import ogImageEn from '../assets/og/og-en.png';
+import ogImageFr from '../assets/og/og-fr.png';
 import { languages, defaultLang, pathWithoutLocale, toLang, useTranslations } from '../i18n';
 import '../styles/tokens.css';
 import '../styles/global.css';
@@ -34,6 +36,16 @@ const alternates = (Object.keys(languages) as (keyof typeof languages)[]).map((c
   code,
   href: getAbsoluteLocaleUrl(code, basePath),
 }));
+
+/*
+ * The link preview card (LinkedIn, Slack, X, messaging apps): the page's own
+ * title and description, over one share image per language, rendered by
+ * npm run og. Imported rather than in public/, so its URL carries a content
+ * hash: platforms cache previews per image URL, and a new image is then a
+ * new URL. X reads the og: tags too; it only needs to be told the card size.
+ */
+const ogImage = new URL((lang === 'fr' ? ogImageFr : ogImageEn).src, Astro.site);
+const ogLocale = { en: 'en_US', fr: 'fr_FR' } as const;
 ---
 
 <!doctype html>
@@ -69,9 +81,27 @@ const alternates = (Object.keys(languages) as (keyof typeof languages)[]).map((c
          block in astro.config.mjs for why. -->
     <Font cssVariable="--font-sans" />
     <Font cssVariable="--font-mono" />
-    <!-- Open Graph, Twitter cards and the default OG image land in the SEO
-         pass; canonical, description and hreflang are here so every page has
-         them from the start. -->
+    {!noindex && (
+      <>
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content={t('site.title')} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={canonical} />
+        <meta property="og:locale" content={ogLocale[lang]} />
+        {(Object.keys(ogLocale) as (keyof typeof ogLocale)[])
+          .filter((code) => code !== lang)
+          .map((code) => (
+            <meta property="og:locale:alternate" content={ogLocale[code]} />
+          ))}
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content={`${t('site.title')}, ${t('site.role')}`} />
+        <meta name="twitter:card" content="summary_large_image" />
+      </>
+    )}
   </head>
   <body>
     <a class="skip-link" href="#main">
