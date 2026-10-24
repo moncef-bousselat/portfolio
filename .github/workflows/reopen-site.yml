@@ -1,0 +1,84 @@
+# Turns the site back on after the cost kill switch (infra/main/killswitch.tf)
+# disabled it. Manual only, and gated like an apply: the job runs in the infra
+# environment, so it waits for the required reviewer, and uses the apply role.
+#
+#   gh workflow run reopen-site.yml
+#
+# It re-arms the kill switch alarms first (sets them to OK, so the next
+# evaluation can fire again), then enables the distribution and waits until
+# CloudFront has deployed it.
+#
+# The distribution config is never printed: it holds the x-origin-verify
+# secret among the origin's custom headers. It goes through a temp file.
+
+name: Reopen site
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+# Never alongside a release: both change the distribution.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  reopen:
+    name: Reopen site
+    runs-on: ubuntu-24.04
+    environment: infra
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+      # "${var.project}-kill-switch-" in infra/main/killswitch.tf. Alarms live
+      # in us-east-1, beside CloudFront's metrics.
+      ALARM_PREFIX: portfolio-kill-switch-
+      ALARM_REGION: us-east-1
+    steps:
+      - name: Assume the apply role
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_APPLY }}
+          aws-region: ${{ vars.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - name: Re-arm the kill switch alarms
+        run: |
+          names=$(aws cloudwatch describe-alarms --region "${ALARM_REGION}" \
+            --alarm-name-prefix "${ALARM_PREFIX}" --query 'MetricAlarms[].AlarmName' --output text)
+          if [ -z "${names}" ]; then
+            echo "::warning::No kill switch alarms found under ${ALARM_PREFIX}; nothing to re-arm."
+          fi
+          {
+            echo "### Kill switch alarms"
+            echo
+            echo "| Alarm | Was | Now |"
+            echo "| --- | --- | --- |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          for name in ${names}; do
+            was=$(aws cloudwatch describe-alarms --region "${ALARM_REGION}" --alarm-names "${name}" \
+              --query 'MetricAlarms[0].StateValue' --output text)
+            aws cloudwatch set-alarm-state --region "${ALARM_REGION}" --alarm-name "${name}" \
+              --state-value OK --state-reason "Re-armed by the Reopen site workflow"
+            echo "| \`${name}\` | ${was} | OK (re-armed) |" >> "${GITHUB_STEP_SUMMARY}"
+          done
+
+      - name: Enable the distribution
+        run: |
+          work=$(mktemp -d)
+          trap 'rm -rf "${work}"' EXIT
+          aws cloudfront get-distribution-config --id "${DISTRIBUTION_ID}" > "${work}/current.json"
+          if [ "$(jq -r '.DistributionConfig.Enabled' "${work}/current.json")" = "true" ]; then
+            echo "The distribution is already enabled." | tee -a "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          jq '.DistributionConfig | .Enabled = true' "${work}/current.json" > "${work}/config.json"
+          aws cloudfront update-distribution --id "${DISTRIBUTION_ID}" \
+            --if-match "$(jq -r '.ETag' "${work}/current.json")" \
+            --distribution-config "file://${work}/config.json" > /dev/null
+          echo "Enabled; waiting for CloudFront to deploy it (a few minutes)."
+          aws cloudfront wait distribution-deployed --id "${DISTRIBUTION_ID}"
+          echo "The site is back online." | tee -a "${GITHUB_STEP_SUMMARY}"

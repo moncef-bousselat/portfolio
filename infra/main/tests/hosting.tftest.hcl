@@ -128,6 +128,25 @@ mock_provider "aws" {
       certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/00000000-0000-0000-0000-000000000000"
     }
   }
+
+  # The kill switch lives here, beside CloudFront's metrics.
+  mock_resource "aws_sns_topic" {
+    defaults = {
+      arn = "arn:aws:sns:us-east-1:123456789012:portfolio-kill-switch"
+    }
+  }
+
+  mock_resource "aws_cloudwatch_log_group" {
+    defaults = {
+      arn = "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/portfolio-kill-switch"
+    }
+  }
+
+  mock_resource "aws_lambda_function" {
+    defaults = {
+      arn = "arn:aws:lambda:us-east-1:123456789012:function:portfolio-kill-switch"
+    }
+  }
 }
 
 # terraform test also loads a local terraform.tfvars, so every variable is
@@ -159,6 +178,12 @@ variables {
   log_retention_days              = 14
 
   contact_rate_limit_window_seconds = 300
+
+  kill_switch_enabled                  = true
+  kill_switch_fast_usd                 = 0.25
+  kill_switch_daily_usd                = 1
+  cloudfront_request_price_per_10k_usd = 0.012
+  cloudfront_transfer_price_per_gb_usd = 0.085
 }
 
 run "without_a_domain" {
@@ -581,4 +606,95 @@ run "turns_the_rate_limit_off_with_zero" {
     condition     = aws_lambda_function.contact.environment[0].variables["RATE_LIMIT_WINDOW_SECONDS"] == "0"
     error_message = "0 reaches the Lambda, which then skips the limit."
   }
+}
+
+run "kill_switch_alarms_estimate_cost_in_two_windows" {
+  command = apply
+
+  variables {
+    domain_name = "example.com"
+  }
+
+  assert {
+    condition = {
+      for key, alarm in aws_cloudwatch_metric_alarm.kill_switch : key => [
+        alarm.alarm_name, alarm.threshold, alarm.comparison_operator, alarm.treat_missing_data,
+        one([for q in alarm.metric_query : q.metric[0].period if q.id == "requests"]),
+      ]
+      } == {
+      "5min" = ["portfolio-kill-switch-5min", 0.25, "GreaterThanOrEqualToThreshold", "notBreaching", 300]
+      "24h"  = ["portfolio-kill-switch-24h", 1, "GreaterThanOrEqualToThreshold", "notBreaching", 86400]
+    }
+    error_message = "Two alarms, $0.25 in 5 minutes and $1 in 24 hours, quiet when there is no traffic."
+  }
+
+  assert {
+    condition = alltrue([
+      for alarm in aws_cloudwatch_metric_alarm.kill_switch :
+      one([for q in alarm.metric_query : q.expression if q.id == "cost"]) == "FILL(requests, 0) * 0.012 / 10000 + FILL(bytes, 0) / 1000000000 * 0.085"
+      && toset([for q in alarm.metric_query : q.metric[0].metric_name if q.id != "cost"]) == toset(["Requests", "BytesDownloaded"])
+      && alltrue([for q in alarm.metric_query : q.metric[0].dimensions == tomap({ DistributionId = aws_cloudfront_distribution.site.id, Region = "Global" }) if q.id != "cost"])
+      && alarm.alarm_actions == toset([aws_sns_topic.kill_switch[0].arn])
+    ])
+    error_message = "Each alarm prices this distribution's requests and bytes out, and notifies the kill switch topic."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.kill_switch[0].handler == "killswitch.handler"
+      && aws_lambda_function.kill_switch[0].environment[0].variables == tomap({
+        DISTRIBUTION_ID  = aws_cloudfront_distribution.site.id
+        NOTIFY_TOPIC_ARN = aws_sns_topic.kill_switch_notify[0].arn
+        SITE_NAME        = "example.com"
+      })
+    )
+    error_message = "The function runs killswitch.handler against this distribution, naming the site by its domain."
+  }
+
+  assert {
+    condition = (
+      aws_sns_topic_subscription.kill_switch_owner[0].protocol == "email"
+      && aws_sns_topic_subscription.kill_switch_owner[0].endpoint == "alerts@example.com"
+      && aws_sns_topic_subscription.kill_switch_function[0].protocol == "lambda"
+      && aws_lambda_permission.kill_switch[0].source_arn == aws_sns_topic.kill_switch[0].arn
+    )
+    error_message = "The alarm topic invokes the function, and the notice goes to the budget alert address."
+  }
+}
+
+run "kill_switch_thresholds_are_variables" {
+  command = plan
+
+  variables {
+    kill_switch_fast_usd  = 3
+    kill_switch_daily_usd = 10
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.kill_switch["5min"].threshold == 3 && aws_cloudwatch_metric_alarm.kill_switch["24h"].threshold == 10
+    error_message = "The thresholds come from the variables."
+  }
+}
+
+run "no_kill_switch_when_turned_off" {
+  command = plan
+
+  variables {
+    kill_switch_enabled = false
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.kill_switch) == 0 && length(aws_lambda_function.kill_switch) == 0 && length(aws_sns_topic.kill_switch) == 0
+    error_message = "kill_switch_enabled = false creates none of it."
+  }
+}
+
+run "rejects_a_zero_kill_switch_threshold" {
+  command = plan
+
+  variables {
+    kill_switch_fast_usd = 0
+  }
+
+  expect_failures = [var.kill_switch_fast_usd]
 }
