@@ -118,6 +118,13 @@ for your approval of the `infra` environment, then:
 2. **Enables the distribution** and waits until CloudFront has deployed it,
    which takes a few minutes.
 
+**Then allow up to 15 more minutes.** While the site was off, its name did
+not resolve, and resolvers that looked it up cached that answer for the
+zone's negative-cache TTL: the lower of the SOA record's TTL and its minimum
+field, 900 seconds on Route 53. Your own machine is one of them; flush its
+DNS cache to see the site at once (`ipconfig /flushdns` on Windows, which
+also serves WSL).
+
 **After the 24-hour alarm trips**, its window still contains the spike for up
 to a day. Reopening sooner trips it again. Wait, or raise
 `kill_switch_daily_usd` first. The email says so when that alarm is the one
