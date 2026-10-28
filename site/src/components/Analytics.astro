@@ -11,8 +11,11 @@ import { analytics } from '../config/site';
  * - data-domains: counts only on the production hostname, never a local
  *   build or the preview server.
  * - data-do-not-track: visitors who send Do Not Track are not counted.
- * - data-exclude-search: query strings never leave the browser. The hash is
- *   kept, since it names the project a visitor opened.
+ * - No data-exclude-search: the query string is sent, so utm_* tags on a
+ *   posted link attribute visits that arrive without a referrer (LinkedIn's
+ *   in-app browser sends none). No page here carries data in its query
+ *   string. The hash is kept too, since it names the project a visitor
+ *   opened.
  */
 const domain = Astro.site?.hostname;
 ---
@@ -26,6 +29,5 @@ const domain = Astro.site?.hostname;
     data-host-url={analytics.hostUrl}
     data-domains={domain}
     data-do-not-track="true"
-    data-exclude-search="true"
   />
 )}
