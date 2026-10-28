@@ -81,6 +81,16 @@ const en = {
 
   'link.newTab': '(opens in a new tab)',
 
+  'share.label': 'Share',
+  'share.linkedin': 'Share on LinkedIn',
+  'share.x': 'Share on X',
+  'share.bluesky': 'Share on Bluesky',
+  'share.reddit': 'Share on Reddit',
+  'share.copy': 'Copy link',
+  'share.copied': 'Link copied',
+  'share.copyFailed': 'Could not copy the link',
+  'share.more': 'More sharing options',
+
   'skip.content': 'Skip to content',
 
   'lang.label': 'Language',

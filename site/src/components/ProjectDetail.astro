@@ -3,6 +3,7 @@ import { render } from 'astro:content';
 import { getRelativeLocaleUrl } from 'astro:i18n';
 import ExternalLink from './ExternalLink.astro';
 import FallbackNotice from './FallbackNotice.astro';
+import ShareBar from './ShareBar.astro';
 import { formatMonthYear, toLang, useTranslations } from '../i18n';
 import type { Localized } from '../lib/content';
 
@@ -29,6 +30,8 @@ const links = (Object.keys(linkLabels) as (keyof typeof linkLabels)[])
   .map((key) => ({ href: data.links[key], label: linkLabels[key] }))
   .filter((l): l is { href: string; label: string } => Boolean(l.href));
 ---
+
+<ShareBar title={data.title} />
 
 <article class="detail">
   <nav class="back" aria-label={t('nav.label')}>

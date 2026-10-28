@@ -11,7 +11,7 @@
  * data-umami-event attribute instead, with no JavaScript of ours.
  */
 
-export type TrackEvent = 'cv_download' | 'contact_success';
+export type TrackEvent = 'cv_download' | 'contact_success' | 'share';
 
 declare global {
   interface Window {

@@ -80,6 +80,16 @@ const fr: UIStrings = {
 
   'link.newTab': '(ouvre dans un nouvel onglet)',
 
+  'share.label': 'Partager',
+  'share.linkedin': 'Partager sur LinkedIn',
+  'share.x': 'Partager sur X',
+  'share.bluesky': 'Partager sur Bluesky',
+  'share.reddit': 'Partager sur Reddit',
+  'share.copy': 'Copier le lien',
+  'share.copied': 'Lien copié',
+  'share.copyFailed': 'Impossible de copier le lien',
+  'share.more': 'Autres options de partage',
+
   'skip.content': 'Aller au contenu',
 
   'lang.label': 'Langue',

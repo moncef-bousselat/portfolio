@@ -175,6 +175,11 @@ as `https://moncefbousselat.com/?utm_source=linkedin` is credited to LinkedIn
 even when the visitor's app sends no referrer. Two events are counted beyond pageviews:
 `cv_download` and `contact_success`.
 
+Articles and project pages carry share buttons: plain links to each
+platform's compose page, so no third-party script. A click is counted as a
+`share` event with its `platform`, and the shared URL carries
+`utm_source=<platform>&utm_medium=share`.
+
 ## Accessibility and performance
 
 Accessibility is a build-time concern rather than an afterthought:
