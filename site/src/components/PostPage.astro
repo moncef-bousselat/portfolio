@@ -41,14 +41,14 @@ const projectsHref = getRelativeLocaleUrl(lang, '/projects/');
     <span class="meta">
       <span class="type">{t(`writing.type.${data.type}` as 'writing.type.note')}</span>
       <span>
-        {t('writing.published')}
+        {t('writing.published')}{' '}
         <time datetime={data.pubDate.toISOString().slice(0, 10)}>
           {formatDate(data.pubDate, lang)}
         </time>
       </span>
       {data.updatedDate && (
         <span>
-          {t('writing.updated')}
+          {t('writing.updated')}{' '}
           <time datetime={data.updatedDate.toISOString().slice(0, 10)}>
             {formatDate(data.updatedDate, lang)}
           </time>

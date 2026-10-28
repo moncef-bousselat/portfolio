@@ -170,7 +170,9 @@ endpoint and website ID there, then `npm run build && npm run headers`. The
 CSP gains the script's origin in `script-src` and the endpoint's in
 `connect-src`; Umami Cloud's are different hosts, `cloud.umami.is` and
 `gateway.umami.is`. Only the production hostname is counted, so local
-builds never reach the dashboard. Two events are counted beyond pageviews:
+builds never reach the dashboard. Query strings are sent, so a link posted
+as `https://moncefbousselat.com/?utm_source=linkedin` is credited to LinkedIn
+even when the visitor's app sends no referrer. Two events are counted beyond pageviews:
 `cv_download` and `contact_success`.
 
 Articles and project pages carry share buttons: plain links to each
