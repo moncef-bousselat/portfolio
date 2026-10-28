@@ -60,6 +60,39 @@ test('a project opens as a modal from a deep link, and Escape closes it', async 
   expect(problems).toEqual([]);
 });
 
+test('a project page shares tagged links, and copy link copies the clean URL', async ({
+  page,
+  context,
+  problems,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  // Only projects with a write-up have a page of their own; take one the
+  // index links to.
+  await page.goto('/projects/');
+  const path = await page
+    .locator('a[href^="/projects/"]:not([href="/projects/"]):not([href*="#"])')
+    .first()
+    .getAttribute('href');
+  expect(path, 'a project detail page').toMatch(/^\/projects\/[^/]+\/$/);
+  await page.goto(path ?? '');
+
+  const share = page.getByRole('complementary', { name: 'Share' });
+  const linkedin = new URL(
+    (await share.getByRole('link', { name: /Share on LinkedIn/ }).getAttribute('href')) ?? '',
+  );
+  expect(linkedin.origin).toBe('https://www.linkedin.com');
+  const shared = new URL(linkedin.searchParams.get('url') ?? '');
+  expect(shared.pathname).toBe(path);
+  expect(shared.searchParams.get('utm_source')).toBe('linkedin');
+
+  await share.getByRole('button', { name: 'Copy link' }).click();
+  await expect(share.getByRole('status')).toHaveText('Link copied');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    `https://moncefbousselat.com${path}`,
+  );
+  expect(problems).toEqual([]);
+});
+
 test.describe('with JavaScript off', () => {
   test.use({ javaScriptEnabled: false });
 

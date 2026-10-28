@@ -82,6 +82,7 @@
   --measure: 65ch; /* readable line length for running text */
   --width-content: 48rem;
   --width-wide: 68rem;
+  --size-control: 2.75rem; /* 44px: icon buttons' touch target (WCAG 2.5.5) */
 
   /* ---- Shape --------------------------------------------------------- */
   --radius-sm: 2px;

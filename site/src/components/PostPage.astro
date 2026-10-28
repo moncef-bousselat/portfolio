@@ -2,6 +2,7 @@
 import { render } from 'astro:content';
 import { getRelativeLocaleUrl } from 'astro:i18n';
 import FallbackNotice from './FallbackNotice.astro';
+import ShareBar from './ShareBar.astro';
 import TableOfContents from './TableOfContents.astro';
 import { formatDate, toLang, useTranslations } from '../i18n';
 import { readingTimeMinutes, resolveReference, tagSlug, type Localized } from '../lib/content';
@@ -26,6 +27,8 @@ const related = (
 
 const projectsHref = getRelativeLocaleUrl(lang, '/projects/');
 ---
+
+<ShareBar title={data.title} />
 
 <article class="post">
   <nav class="back">
