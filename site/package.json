@@ -19,8 +19,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.10",
-    "shiki": "^4.5.0",
+    "@astrojs/check": "^0.9.12",
+    "shiki": "^4.6.0",
     "typescript": "~6.0.3"
   }
 }
